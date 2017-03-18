@@ -41,7 +41,7 @@ def print_menu():
     print "3. Bandwidth Monitor"
     print "4. Settings"
     print "5. Exit"
-    print 60 * "-"
+    print 62 * "-"
     print "\n"
   
 loop = True      
@@ -103,7 +103,7 @@ browser.get(routerURL)
 
 browser.implicitly_wait(5)
 
-timeout_seconds = 10
+timeout_seconds = 5
 
 try:
     element_present = EC.presence_of_element_located((By.ID, 'updateBtn'))
@@ -119,11 +119,11 @@ browser.quit()
 
 data = []
 
-header = soup.find('table', {'class': 'XL bdr tc'})
+thead = soup.find('table', {'class': 'XL bdr tc'})
 table = soup.find('table', {'id': 'hostTbl'})
 
 
-table_header = header.find('tr')
+table_header = thead.find('tr')
 table_body = table.find('tbody')
 
 header = []
@@ -190,7 +190,7 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 f = open(dir_path + '\Output\devices.html','wb')
 
 htmlO = """<html>
-<head></head>
+<head><style>td { text-align: center; } </style></head>
 <body><br>"""
 
 htmlC = """</body>
@@ -198,9 +198,8 @@ htmlC = """</body>
 
 f.write(htmlO + "\n")
 
-for elem in dataF:
-    f.write(str(elem).translate(None, "',").strip("[]") + "<br>" + "\n")
-
+f.write(str(thead).replace('<br/>', '').replace('628px', '800px') + "\n")
+f.write(str(table).replace('<br/>', '').replace('628px', '800px') + "\n")
 f.write (htmlC)	
 
 f.close()
