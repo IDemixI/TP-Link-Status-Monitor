@@ -6,6 +6,7 @@ import getpass
 import re
 import csv
 import lxml
+import json
 
 from sys import argv
 from selenium import webdriver
@@ -28,6 +29,7 @@ routerBandStat = "#__stat.htm"
 
 
 makeCSV = False
+makeHTML = False
 
 # Main Menu
       
@@ -61,7 +63,6 @@ while loop:
         loop = False
     elif choice == '4':
         print "\nLoading Settings Menu..."
-        makeCSV = True
         loop = False
     elif choice == '5':
         print "\nExiting Program..."
@@ -81,6 +82,8 @@ if len(argv) > 1 and argv[1] == "ollie":
 elif len(argv) > 1 and argv[1] == "debug":
     authKey = "Basic YWRtaW46ZmlnaHRpbmc="
     print ("\nDebug Mode...\n")
+    makeCSV = True
+    makeHTML = True
     print ("Your Auth Key is: " + authKey + "\n")
     browser = webdriver.PhantomJS()	
 else:
@@ -129,32 +132,87 @@ i = 0
 
 for tag in table_header.find_all(re.compile("^t")):
     if i == 0:
-	    header.append(tag.text.ljust(3)[:3])
+	    header.append(str(tag.text).ljust(3)[:3])
+    elif i == 1:
+	    header.append(str(tag.text).ljust(30)[:30])
+    elif i == 2:
+        header.append(str(tag.text).ljust(18)[:18])
+    elif i == 3:
+        header.append(str(tag.text).ljust(15)[:15])
     elif i == 4:
-        header.append(tag.text.ljust(15)[:15])
+        header.append(str(tag.text).ljust(12)[:12])
     else:
-	    header.append(tag.text.ljust(25)[:25])
+        print("No element found. Error detected.\n")
     i += 1
 
-print "\n"
-
 data.append(header) 
+
+
+#print('-' * 80)
+#test = str(header).strip('[]').translate(None, "',")
+#print(test)
+#print('-' * 80 + '\n')
 
 rows = table_body.find_all("tr")
 
 for row in rows:
     cols = row.find_all("td")
-    cols = [ele.text.strip().ljust(25)[:25] for ele in cols]
-    data.append([ele for ele in cols if ele]) # Get rid of empty values
+
+    x = 0
+    body = []
+
+    for ele in cols:
+        if x == 0:
+            body.append(str(ele.text.strip()).ljust(3)[:3])
+        elif x == 1:
+            body.append(str(ele.text.strip()).ljust(30)[:30])
+        elif x == 2:
+            body.append(str(ele.text.strip()).ljust(18)[:18])
+        elif x == 3:
+            body.append(str(ele.text.strip()).ljust(15)[:15])
+        elif x == 4:
+            body.append(str(ele.text.strip()).ljust(12)[:12])
+        else:
+            print("No element found. Error detected.\n")
+        x += 1
+        
+    data.append(body)
 	
-	
-datao = [str(a) for a in data]
-print("\n" . join(datao))
+dataF = [str(a).strip('[]') for a in data]
+print("\n" . join(dataF).translate(None, "',"))
+
+print ("\n")
+
+dir_path = os.path.dirname(os.path.realpath(__file__))
+
+# write-html.py
+
+f = open(dir_path + '\Output\devices.html','wb')
+
+htmlO = """<html>
+<head></head>
+<body><br>"""
+
+htmlC = """</body>
+</html>"""
+
+f.write(htmlO + "\n")
+
+for elem in dataF:
+    f.write(str(elem).translate(None, "',").strip("[]") + "<br>" + "\n")
+
+f.write (htmlC)	
+
+f.close()
+
+print('Created: ' + dir_path + '\Output\devices.html')
+
 
 if makeCSV == True:
-    with open("Clients.csv", "wb") as f:
+    with open(dir_path + '\Output\devices.csv', 'wb') as f:
         writer = csv.writer(f)
         writer.writerows(data)
+        print('Created: ' + dir_path + '\Output\devices.csv')
 
 exit(0)
 
