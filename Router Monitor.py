@@ -21,10 +21,10 @@ from bs4 import BeautifulSoup
 routerURL = "http://192.168.1.1/"
 
 #DHCP Client List
-routerDHCPList = "http://192.168.1.1/#__dhcpClient.htm"
+routerDHCPList = "#__dhcpClient.htm"
 
 #Bandwidth Stats Page
-routerBandStat = "http://192.168.1.1/#__stat.htm"
+routerBandStat = "#__stat.htm"
 
 
 makeCSV = False
@@ -53,11 +53,11 @@ while loop:
         loop = False
     elif choice == '2':
         print "\nRetrieving Device List..."
-        routerURL = routerDHCPList
+        routerURL = routerURL + routerDHCPList
         loop = False		
     elif choice == '3':
         print "\nStarting Bandwidth Monitor..."
-        routerURL = routerBandStat
+        routerURL = routerURL + routerBandStat
         loop = False
     elif choice == '4':
         print "\nLoading Settings Menu..."
