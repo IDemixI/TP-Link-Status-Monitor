@@ -27,9 +27,19 @@ routerDHCPList = "#__dhcpClient.htm"
 #Bandwidth Stats Page
 routerBandStat = "#__stat.htm"
 
-
 makeCSV = False
 makeHTML = False
+
+
+
+
+def main():
+
+    mainMenu()
+
+
+
+
 
 # Main Menu
       
@@ -43,175 +53,195 @@ def print_menu():
     print "5. Exit"
     print 62 * "-"
     print "\n"
-  
-loop = True      
-  
-while loop:
-    print_menu()
-    choice = raw_input("Enter your choice [1-5]: ")
+
+	
+	
+def mainMenu():	
+
+    global routerURL
+    global routerDHCPList
+    global routerBandStat
+    
+    loop = True      
+
+    while loop:
+        print_menu()
+        choice = raw_input("Enter your choice [1-5]: ")
      
-    if choice == '1':     
-        print "\nGetting Router Status..."
-        loop = False
-    elif choice == '2':
-        print "\nRetrieving Device List..."
-        routerURL = routerURL + routerDHCPList
-        loop = False		
-    elif choice == '3':
-        print "\nStarting Bandwidth Monitor..."
-        routerURL = routerURL + routerBandStat
-        loop = False
-    elif choice == '4':
-        print "\nLoading Settings Menu..."
-        loop = False
-    elif choice == '5':
-        print "\nExiting Program..."
-        loop = False
-        exit(0)
+        if choice == '1':     
+            print "\nGetting Router Status..."
+            loop = False
+        elif choice == '2':
+            print "\nRetrieving Device List..."
+            routerURL = routerURL + routerDHCPList
+            loop = False
+            connectSite('hostTbl', choice)
+        elif choice == '3':
+            print "\nStarting Bandwidth Monitor..."
+            routerURL = routerURL + routerBandStat
+            loop = False
+        elif choice == '4':
+            print "\nLoading Settings Menu..."
+            loop = False
+        elif choice == '5':
+            print "\nExiting Program..."
+            loop = False
+            exit(0)
+        else:
+            # Any integer inputs other than values 1-5 we print an error message
+            raw_input("Invalid option selected. Enter any option to try again..")
+
+
+def connectSite(findEl, choice):
+
+    global makeCSV
+    global makeHTML
+
+    # Enable proxy if any command line arguments are given
+    if len(argv) > 1 and argv[1] == "ollie":
+        print "Setting proxy & Cookie..."
+        authKey = "Basic YWRtaW46ZmlnaHRpbmc="
+        service_args = ['--proxy=127.0.0.1:8080', '--proxy-type=socks5']
+        browser = webdriver.PhantomJS(service_args=service_args)
+    elif len(argv) > 1 and argv[1] == "debug":
+        authKey = "Basic YWRtaW46ZmlnaHRpbmc="
+        print ("\nDebug Mode...\n")
+        makeCSV = True
+        makeHTML = True
+        print ("Your Auth Key is: " + authKey + "\n")
+        browser = webdriver.PhantomJS()	
     else:
-        # Any integer inputs other than values 1-5 we print an error message
-        raw_input("Invalid option selected. Enter any key to try again..")
+        passwd = getpass.getpass("Enter Router Password: ")
+
+        cookieIn = b"admin:" + passwd
+        cookieOut = base64.b64encode(cookieIn.encode("utf8","ignore"))
+
+        authKey = "Basic " + cookieOut
+
+        print ("Your Auth Key is: " + authKey + "\n")
+        browser = webdriver.PhantomJS()
+
+    browser.add_cookie({'name': 'Authorization', 'value': authKey, 'domain': '192.168.1.1', 'path': '/'})
+
+    browser.get(routerURL)
+
+    browser.implicitly_wait(5)
+
+    timeout_seconds = 5
+
+    try:
+        element_present = EC.presence_of_element_located((By.ID, findEl))
+        WebDriverWait(browser, timeout_seconds).until(element_present)
+    except TimeoutException:
+        print "Page load timed out, exiting"
+        exit(1)
+
+    soup = BeautifulSoup(browser.page_source, "lxml")
+    browser.close()
+    browser.quit()
+    parsePage(choice, soup)
 
 
-# Enable proxy if any command line arguments are given
-if len(argv) > 1 and argv[1] == "ollie":
-    print "Setting proxy & Cookie..."
-    authKey = "Basic YWRtaW46ZmlnaHRpbmc="
-    service_args = ['--proxy=127.0.0.1:8080', '--proxy-type=socks5']
-    browser = webdriver.PhantomJS(service_args=service_args)
-elif len(argv) > 1 and argv[1] == "debug":
-    authKey = "Basic YWRtaW46ZmlnaHRpbmc="
-    print ("\nDebug Mode...\n")
-    makeCSV = True
-    makeHTML = True
-    print ("Your Auth Key is: " + authKey + "\n")
-    browser = webdriver.PhantomJS()	
-else:
-    passwd = getpass.getpass("Enter Router Password: ")
 
-    cookieIn = b"admin:" + passwd
-    cookieOut = base64.b64encode(cookieIn.encode("utf8","ignore"))
+def parsePage(menuChoice, soupData):
 
-    authKey = "Basic " + cookieOut
+    data = []
 
-    print ("Your Auth Key is: " + authKey + "\n")
-    browser = webdriver.PhantomJS()
-
-browser.add_cookie({'name': 'Authorization', 'value': authKey, 'domain': '192.168.1.1', 'path': '/'})
-
-browser.get(routerURL)
-
-browser.implicitly_wait(5)
-
-timeout_seconds = 5
-
-try:
-    element_present = EC.presence_of_element_located((By.ID, 'updateBtn'))
-    WebDriverWait(browser, timeout_seconds).until(element_present)
-except TimeoutException:
-    print "Page load timed out, exiting"
-    exit(1)
-
-soup = BeautifulSoup(browser.page_source, "lxml")
-browser.close()
-browser.quit()
+    thead = soupData.find('table', {'class': 'XL bdr tc'})
+    table = soupData.find('table', {'id': 'hostTbl'})
 
 
-data = []
+    table_header = thead.find('tr')
+    table_body = table.find('tbody')
 
-thead = soup.find('table', {'class': 'XL bdr tc'})
-table = soup.find('table', {'id': 'hostTbl'})
+    header = []
 
+    i = 0
 
-table_header = thead.find('tr')
-table_body = table.find('tbody')
-
-header = []
-
-i = 0
-
-for tag in table_header.find_all(re.compile("^t")):
-    if i == 0:
-	    header.append(str(tag.text).ljust(3)[:3])
-    elif i == 1:
-	    header.append(str(tag.text).ljust(30)[:30])
-    elif i == 2:
-        header.append(str(tag.text).ljust(18)[:18])
-    elif i == 3:
-        header.append(str(tag.text).ljust(15)[:15])
-    elif i == 4:
-        header.append(str(tag.text).ljust(12)[:12])
-    else:
-        print("No element found. Error detected.\n")
-    i += 1
-
-data.append(header) 
-
-
-#print('-' * 80)
-#test = str(header).strip('[]').translate(None, "',")
-#print(test)
-#print('-' * 80 + '\n')
-
-rows = table_body.find_all("tr")
-
-for row in rows:
-    cols = row.find_all("td")
-
-    x = 0
-    body = []
-
-    for ele in cols:
-        if x == 0:
-            body.append(str(ele.text.strip()).ljust(3)[:3])
-        elif x == 1:
-            body.append(str(ele.text.strip()).ljust(30)[:30])
-        elif x == 2:
-            body.append(str(ele.text.strip()).ljust(18)[:18])
-        elif x == 3:
-            body.append(str(ele.text.strip()).ljust(15)[:15])
-        elif x == 4:
-            body.append(str(ele.text.strip()).ljust(12)[:12])
+    for tag in table_header.find_all(re.compile("^t")):
+        if i == 0:
+	        header.append(str(tag.text).ljust(3)[:3])
+        elif i == 1:
+	        header.append(str(tag.text).ljust(30)[:30])
+        elif i == 2:
+            header.append(str(tag.text).ljust(18)[:18])
+        elif i == 3:
+            header.append(str(tag.text).ljust(15)[:15])
+        elif i == 4:
+            header.append(str(tag.text).ljust(12)[:12])
         else:
             print("No element found. Error detected.\n")
-        x += 1
+        i += 1
+
+    data.append(header) 
+
+
+    #print('-' * 80)
+    #test = str(header).strip('[]').translate(None, "',")
+    #print(test)
+    #print('-' * 80 + '\n')
+
+    rows = table_body.find_all("tr")
+
+    for row in rows:
+        cols = row.find_all("td")
+
+        x = 0
+        body = []
+
+        for ele in cols:
+            if x == 0:
+                body.append(str(ele.text.strip()).ljust(3)[:3])
+            elif x == 1:
+                body.append(str(ele.text.strip()).ljust(30)[:30])
+            elif x == 2:
+                body.append(str(ele.text.strip()).ljust(18)[:18])
+            elif x == 3:
+                body.append(str(ele.text.strip()).ljust(15)[:15])
+            elif x == 4:
+                body.append(str(ele.text.strip()).ljust(12)[:12])
+            else:
+                print("No element found. Error detected.\n")
+            x += 1
         
-    data.append(body)
+        data.append(body)
 	
-dataF = [str(a).strip('[]') for a in data]
-print("\n" . join(dataF).translate(None, "',"))
+    dataF = [str(a).strip('[]') for a in data]
+    print("\n" . join(dataF).translate(None, "',") + "\n")
 
-print ("\n")
+    callOutput(thead, table, data)
+    exit(0)
+	
+	
+def callOutput(head, table, csvOutput):
+	
+    dir_path = os.path.dirname(os.path.realpath(__file__))
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
+    f = open(dir_path + '\Output\devices.html','wb')
 
-# write-html.py
+    htmlO = """<html>
+    <head><style>td { text-align: center; } table { border: thin solid black; } </style></head>
+    <body><br>"""
 
-f = open(dir_path + '\Output\devices.html','wb')
+    htmlC = """</body>
+    </html>"""
 
-htmlO = """<html>
-<head><style>td { text-align: center; } </style></head>
-<body><br>"""
+    f.write(htmlO + "\n")
 
-htmlC = """</body>
-</html>"""
+    f.write(str(head).replace('<br/>', '').replace('628px', '800px') + "\n")
+    f.write(str(table).replace('<br/>', '').replace('628px;', '800px; border-top: 0;').replace('<tr>', '\n<tr>') + "\n")
+    f.write (htmlC)	
 
-f.write(htmlO + "\n")
+    f.close()
 
-f.write(str(thead).replace('<br/>', '').replace('628px', '800px') + "\n")
-f.write(str(table).replace('<br/>', '').replace('628px', '800px') + "\n")
-f.write (htmlC)	
-
-f.close()
-
-print('Created: ' + dir_path + '\Output\devices.html')
+    print('Created: ' + dir_path + '\Output\devices.html')
 
 
-if makeCSV == True:
-    with open(dir_path + '\Output\devices.csv', 'wb') as f:
-        writer = csv.writer(f)
-        writer.writerows(data)
-        print('Created: ' + dir_path + '\Output\devices.csv')
+    if makeCSV == True:
+        with open(dir_path + '\Output\devices.csv', 'wb') as f:
+            writer = csv.writer(f)
+            writer.writerows(csvOutput)
+            print('Created: ' + dir_path + '\Output\devices.csv')
 
+main()
 exit(0)
-
