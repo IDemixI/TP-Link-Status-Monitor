@@ -27,6 +27,9 @@ routerDHCPList = "#__dhcpClient.htm"
 #Bandwidth Stats Page
 routerBandStat = "#__stat.htm"
 
+#Blank URL for parsing
+routerURLx = ""
+
 makeCSV = False
 makeHTML = False
 
@@ -61,6 +64,7 @@ def mainMenu():
     global routerURL
     global routerDHCPList
     global routerBandStat
+    global routerURLx
     
     loop = True      
 
@@ -72,13 +76,12 @@ def mainMenu():
             print "\nGetting Router Status..."
             loop = False
         elif choice == '2':
-            print "\nRetrieving Device List..."
-            routerURL = routerURL + routerDHCPList
+            routerURLx = routerURL + routerDHCPList
             loop = False
             connectSite(choice)
         elif choice == '3':
             print "\nStarting Bandwidth Monitor..."
-            routerURL = routerURL + routerBandStat
+            routerURLx = routerURL + routerBandStat
             loop = False
         elif choice == '4':
             print "\nLoading Settings Menu..."
@@ -101,8 +104,10 @@ def connectSite(choice):
 	    findEl = 'Dunno yet'
     elif choice == '2':
         findEl = 'hostTbl'
+        print "\nRetrieving Device List..."
     else:
         findEl = 'Dunno yet'
+		
 
     # Enable proxy if any command line arguments are given
     if len(argv) > 1 and argv[1] == "ollie":
@@ -130,11 +135,11 @@ def connectSite(choice):
 
     browser.add_cookie({'name': 'Authorization', 'value': authKey, 'domain': '192.168.1.1', 'path': '/'})
 
-    browser.get(routerURL)
+    browser.get(routerURLx)
 
     browser.implicitly_wait(5)
 
-    timeout_seconds = 5
+    timeout_seconds = 6
 
     try:
         element_present = EC.presence_of_element_located((By.ID, findEl))
@@ -144,7 +149,7 @@ def connectSite(choice):
         mainMenu()
 
     soup = BeautifulSoup(browser.page_source, "lxml")
-    browser.close()
+    
     browser.quit()
     parsePage(choice, soup)
 
@@ -253,6 +258,7 @@ def callOutput(head, table, csvOutput):
             writer = csv.writer(f)
             writer.writerows(csvOutput)
             print('Created: ' + dir_path + '\Output\devices.csv')
+        f.close()
 
 main()
 exit(0)
