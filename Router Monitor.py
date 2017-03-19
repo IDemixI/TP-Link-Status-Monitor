@@ -137,8 +137,6 @@ def connectSite(choice):
 
     browser.get(routerURLx)
 
-    browser.implicitly_wait(5)
-
     timeout_seconds = 6
 
     try:
