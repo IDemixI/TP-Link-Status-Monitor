@@ -30,10 +30,18 @@ routerBandStat = "#__stat.htm"
 #Blank URL for parsing
 routerURLx = ""
 
+# Set a global variable for retries - try and load page 2/3 times before quitting out and resetting count
+pageRetry = 0
+
+# Global Auth Key for cookie generation on multiple retries
+authKey = ""
+
 makeCSV = False
 makeHTML = False
 
-# Set a global variable for retries - try and load page 2/3 times before quitting out and resetting count
+tmpCSV = ''
+tmpHTML = ''
+
 
 
 def main():
@@ -43,10 +51,9 @@ def main():
 
 
 
-
 # Main Menu
       
-def print_menu():
+def printMenu():
     print "\n"
     print 20 * "-" , " Network Statistics " , 20 * "-"
     print "1. Router Status"
@@ -69,7 +76,7 @@ def mainMenu():
     loop = True      
 
     while loop:
-        print_menu()
+        printMenu()
         choice = raw_input("Enter your choice [1-5]: ")
      
         if choice == '1':     
@@ -85,6 +92,7 @@ def mainMenu():
             loop = False
         elif choice == '4':
             print "\nLoading Settings Menu..."
+            settingsMenu()
             loop = False
         elif choice == '5':
             print "\nExiting Program..."
@@ -92,14 +100,120 @@ def mainMenu():
             exit(0)
         else:
             # Any integer inputs other than values 1-5 we print an error message
-            raw_input("Invalid option selected. Enter any option to try again..")
+            print("\nInvalid option selected. Enter any option to try again..")
+
+
+def printSettings():
+    global makeCSV
+    global makeHTML
+    global tmpCSV
+    global tmpHTML
+
+    if makeCSV == True and tmpCSV == '':
+        tmpCSV = 'Yes'
+    elif tmpCSV == False and tmpCSV == '':
+        tmpCSV = 'No'
+    elif tmpCSV == 'Yes':
+        tmpCSV = 'Yes'
+    else:
+        tmpCSV = 'No'
+
+    if makeHTML == True and tmpHTML == '':
+        tmpHTML = 'Yes'
+    elif tmpHTML == False and tmpHTML == '':
+        tmpHTML = 'No'
+    elif tmpHTML == 'Yes':
+        tmpHTML = 'Yes'
+    else:
+        tmpHTML = 'No'
+	
+    print "\n"
+    print 25 * "-" , " Settings " , 25 * "-"
+    print "1. Generate CSV File - [" + tmpCSV + "]"
+    print "2. Generate HTML File - [" + tmpHTML + "]"
+    print "3. Save and Exit"
+    print "4. Exit without saving"
+    print 62 * "-"
+    print "\n"
+
+
+def settingsMenu():	
+
+    global makeCSV
+    global makeHTML
+    global tmpCSV
+    global tmpHTML
+	
+    loop = True
+    tmpCSV = ''
+    tmpHTML = ''
+	
+    while loop:
+        printSettings()
+        choice = raw_input("Enter your choice [1-4]: ")
+     
+        if choice == '1':
+            while choice == '1':
+                print("\n")
+                tmpCSV = raw_input("Generate CSV File (Y/N): ")
+
+                if tmpCSV == 'Y' or tmpCSV == 'y':
+                    tmpCSV = 'Yes'
+                    choice = ''
+                elif tmpCSV == 'N' or tmpCSV == 'n':
+                    tmpCSV = 'No'
+                    choice = ''
+                else:
+                    print("\nInvalid input.\n")
+
+        elif choice == '2':
+            while choice == '2':
+                print("\n")
+                tmpHTML = raw_input("Generate HTML File (Y/N): ")
+
+                if tmpHTML == 'Y' or tmpHTML == 'y':
+                    tmpHTML = 'Yes'
+                    choice = ''
+                elif tmpHTML == 'N' or tmpHTML == 'n':
+                    tmpHTML = 'No'
+                    choice = ''
+                else:
+                    print("\nInvalid input.\n")
+			
+        elif choice == '3':
+		#if Y, True, if N, False clear temp vals
+
+            if tmpCSV == 'Yes':
+                makeCSV = True
+            elif tmpCSV == 'No':
+                makeCSV = False
+
+            if tmpHTML == 'Yes':
+                makeHTML = True
+            elif tmpHTML == 'No':
+                makeHTML = False
+				
+            tmpCSV = ''
+            tmpHTML = ''
+            print "\nSettings Saved..."
+            loop = False
+            mainMenu()
+
+        elif choice == '4':
+            print "\nReturning to main menu..."
+            loop = False
+            mainMenu()
+        else:
+            # Any integer inputs other than values 1-5 we print an error message
+            print("\nInvalid option selected. Enter any option to try again..")
 
 
 def connectSite(choice):
 
     global makeCSV
     global makeHTML
-		
+    global authKey
+	
     if choice == '1':
 	    findEl = 'Dunno yet'
     elif choice == '2':
@@ -107,6 +221,7 @@ def connectSite(choice):
         print "\nRetrieving Device List..."
     else:
         findEl = 'Dunno yet'
+		
 		
 
     # Enable proxy if any command line arguments are given
@@ -123,14 +238,13 @@ def connectSite(choice):
         print ("Your Auth Key is: " + authKey + "\n")
         browser = webdriver.PhantomJS()	
     else:
-        passwd = getpass.getpass("Enter Router Password: ")
+        if authKey == "":
+            passwd = getpass.getpass("Enter Router Password: ")
+            cookieIn = b"admin:" + passwd
+            cookieOut = base64.b64encode(cookieIn.encode("utf8","ignore"))
+            authKey = "Basic " + cookieOut
+            print ("Your Auth Key is: '" + authKey + "'\n")
 
-        cookieIn = b"admin:" + passwd
-        cookieOut = base64.b64encode(cookieIn.encode("utf8","ignore"))
-
-        authKey = "Basic " + cookieOut
-
-        print ("Your Auth Key is: " + authKey + "\n")
         browser = webdriver.PhantomJS()
 
     browser.add_cookie({'name': 'Authorization', 'value': authKey, 'domain': '192.168.1.1', 'path': '/'})
@@ -228,28 +342,28 @@ def parsePage(menuChoice, soupData):
 	
 	
 def callOutput(head, table, csvOutput):
-	
-    dir_path = os.path.dirname(os.path.realpath(__file__))
 
-    f = open(dir_path + '\Output\devices.html','wb')
+    if makeHTML == True:
 
-    htmlO = """<html>
-    <head><style>td { text-align: center; } table { border: thin solid black; } </style></head>
-    <body><br>"""
+        dir_path = os.path.dirname(os.path.realpath(__file__))
+        f = open(dir_path + '\Output\devices.html','wb')
 
-    htmlC = """</body>
-    </html>"""
+        htmlO = """<html>
+        <head><style>td { text-align: center; } table { border: thin solid black; } </style></head>
+        <body><br>"""
 
-    f.write(htmlO + "\n")
+        htmlC = """</body>
+        </html>"""
 
-    f.write(str(head).replace('<br/>', '').replace('628px', '800px') + "\n")
-    f.write(str(table).replace('<br/>', '').replace('628px;', '800px; border-top: 0;').replace('<tr>', '\n<tr>') + "\n")
-    f.write (htmlC)	
+        f.write(htmlO + "\n")
 
-    f.close()
+        f.write(str(head).replace('<br/>', '').replace('628px', '800px') + "\n")
+        f.write(str(table).replace('<br/>', '').replace('628px;', '800px; border-top: 0;').replace('<tr>', '\n<tr>') + "\n")
+        f.write (htmlC)	
 
-    print('Created: ' + dir_path + '\Output\devices.html')
+        f.close()
 
+        print('Created: ' + dir_path + '\Output\devices.html')
 
     if makeCSV == True:
         with open(dir_path + '\Output\devices.csv', 'wb') as f:
