@@ -30,7 +30,7 @@ routerBandStat = "#__stat.htm"
 makeCSV = False
 makeHTML = False
 
-
+# Set a global variable for retries - try and load page 2/3 times before quitting out and resetting count
 
 
 def main():
@@ -75,7 +75,7 @@ def mainMenu():
             print "\nRetrieving Device List..."
             routerURL = routerURL + routerDHCPList
             loop = False
-            connectSite('hostTbl', choice)
+            connectSite(choice)
         elif choice == '3':
             print "\nStarting Bandwidth Monitor..."
             routerURL = routerURL + routerBandStat
@@ -92,10 +92,17 @@ def mainMenu():
             raw_input("Invalid option selected. Enter any option to try again..")
 
 
-def connectSite(findEl, choice):
+def connectSite(choice):
 
     global makeCSV
     global makeHTML
+		
+    if choice == '1':
+	    findEl = 'Dunno yet'
+    elif choice == '2':
+        findEl = 'hostTbl'
+    else:
+        findEl = 'Dunno yet'
 
     # Enable proxy if any command line arguments are given
     if len(argv) > 1 and argv[1] == "ollie":
@@ -133,8 +140,8 @@ def connectSite(findEl, choice):
         element_present = EC.presence_of_element_located((By.ID, findEl))
         WebDriverWait(browser, timeout_seconds).until(element_present)
     except TimeoutException:
-        print "Page load timed out, exiting"
-        exit(1)
+        print "Page load timed out, going to menu.."
+        mainMenu()
 
     soup = BeautifulSoup(browser.page_source, "lxml")
     browser.close()
@@ -181,7 +188,11 @@ def parsePage(menuChoice, soupData):
     #print(test)
     #print('-' * 80 + '\n')
 
-    rows = table_body.find_all("tr")
+    try:
+        rows = table_body.find_all("tr")
+    except AttributeError:
+        print "Table not found. Reloading page..."
+        connectSite(menuChoice)
 
     for row in rows:
         cols = row.find_all("td")
@@ -210,7 +221,7 @@ def parsePage(menuChoice, soupData):
     print("\n" . join(dataF).translate(None, "',") + "\n")
 
     callOutput(thead, table, data)
-    exit(0)
+    mainMenu()
 	
 	
 def callOutput(head, table, csvOutput):
