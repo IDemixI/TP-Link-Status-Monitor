@@ -305,7 +305,7 @@ def parsePage(menuChoice, soupData):
                 header.append(str(tag.text).ljust(12)[:12])
             else:
                 print("No element found. Error detected.\n")
-            print(str(tag) + str(i))
+            #print(str(tag) + str(i))
             i += 1
 
         data.append(header) 
@@ -326,28 +326,23 @@ def parsePage(menuChoice, soupData):
                 header.insert(0,(str(tag.text[:10]).ljust(20)[:20]))
                 data.append(header)
                 header = []
-                #header.append(str(tag.text[:10]).ljust(20)[:20])
                 header.append(str(tag.text[10:]).ljust(20)[:20])
-                #MAC = str(tag.text[10:]).ljust(20)[:20]
             elif i == 5 or i == 7 or i >= 9:
 	            header.append(str(tag.text).ljust(10)[:10])
             else:
                 print("No element found. Error detected.\n")
-            print((str(tag.text)) + str(i))
             i += 1
 
         data.append(header)
 
-        #data.append(MAC)
-
     print('-' * 80)
-
     dataF = [str(a).strip('[]') for a in data]
-    print("\n" . join(dataF).translate(None, "',") + "\n")
+    print("\n" . join(dataF).translate(None, "',"))
+    print('-' * 80 + '\n')
 
     #test = str(header).strip('[]').translate(None, "',")
     #print(test)
-    print('-' * 80 + '\n')
+    #print('-' * 80 + '\n')
 
     try:
         rows = table_body.find_all("tr")
@@ -374,6 +369,7 @@ def parsePage(menuChoice, soupData):
                 body.append(str(ele.text.strip()).ljust(12)[:12])
             else:
                 print("No element found. Error detected.\n")
+            print(str(ele.text.strip())) # code 0-7 for Bandwidth Monitor!
             x += 1
         
         data.append(body)
