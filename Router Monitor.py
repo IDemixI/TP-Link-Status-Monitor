@@ -90,6 +90,7 @@ def mainMenu():
             print "\nStarting Bandwidth Monitor..."
             routerURLx = routerURL + routerBandStat
             loop = False
+            connectSite(choice)
         elif choice == '4':
             print "\nLoading Settings Menu..."
             settingsMenu()
@@ -219,8 +220,8 @@ def connectSite(choice):
     elif choice == '2':
         findEl = 'hostTbl'
         print "\nRetrieving Device List..."
-    else:
-        findEl = 'Dunno yet'
+    elif choice == '3':
+        findEl = 'stat_table'
 		
 		
 
@@ -263,6 +264,7 @@ def connectSite(choice):
     soup = BeautifulSoup(browser.page_source, "lxml")
     
     browser.quit()
+    #print(soup)
     parsePage(choice, soup)
 
 
@@ -271,39 +273,81 @@ def parsePage(menuChoice, soupData):
 
     data = []
 
-    thead = soupData.find('table', {'class': 'XL bdr tc'})
-    table = soupData.find('table', {'id': 'hostTbl'})
+    if menuChoice == '2':
+        thead = soupData.find('table', {'class': 'XL bdr tc'})
+        table = soupData.find('table', {'id': 'hostTbl'})
+        table_header = thead.find('tr')
+    elif menuChoice == '3':
+        thead = soupData.find('table', {'class': 'XXL bdr tc'})
+        table = soupData.find('table', {'id': 'stat_table'})
+        table_header = thead.find_all('tr')
+        table_header = str(table_header).strip('[]').decode('unicode_escape').encode('ascii','ignore')
+        table_header = BeautifulSoup(table_header, "lxml")
 
-
-    table_header = thead.find('tr')
     table_body = table.find('tbody')
-
+	
     header = []
 
     i = 0
 
-    for tag in table_header.find_all(re.compile("^t")):
-        if i == 0:
-	        header.append(str(tag.text).ljust(3)[:3])
-        elif i == 1:
-	        header.append(str(tag.text).ljust(30)[:30])
-        elif i == 2:
-            header.append(str(tag.text).ljust(18)[:18])
-        elif i == 3:
-            header.append(str(tag.text).ljust(15)[:15])
-        elif i == 4:
-            header.append(str(tag.text).ljust(12)[:12])
-        else:
-            print("No element found. Error detected.\n")
-        i += 1
+    if menuChoice == '2':
+	
+        for tag in table_header.find_all(re.compile("^t")):
+            if i == 0:
+	            header.append(str(tag.text).ljust(3)[:3])
+            elif i == 1:
+	            header.append(str(tag.text).ljust(30)[:30])
+            elif i == 2:
+                header.append(str(tag.text).ljust(18)[:18])
+            elif i == 3:
+                header.append(str(tag.text).ljust(15)[:15])
+            elif i == 4:
+                header.append(str(tag.text).ljust(12)[:12])
+            else:
+                print("No element found. Error detected.\n")
+            print(str(tag) + str(i))
+            i += 1
 
-    data.append(header) 
+        data.append(header) 
 
+    if menuChoice == '3':
+	
+        for tag in table_header.find_all(re.compile("^th")):
+            #if i == 0 or i == 6 or i == 8:
+            if i == 6 or i == 8:
+	            header.append(str(tag.text).ljust(20)[:20])
+            elif i == 1:
+	            header.append(str(tag.text).ljust(31)[:31])
+            elif i == 2:
+                header.append(str(tag.text).ljust(60)[:60])
+            elif i == 3:
+                header.append(str(tag.text).ljust(30)[:30])
+            elif i == 4:
+                header.insert(0,(str(tag.text[:10]).ljust(20)[:20]))
+                data.append(header)
+                header = []
+                #header.append(str(tag.text[:10]).ljust(20)[:20])
+                header.append(str(tag.text[10:]).ljust(20)[:20])
+                #MAC = str(tag.text[10:]).ljust(20)[:20]
+            elif i == 5 or i == 7 or i >= 9:
+	            header.append(str(tag.text).ljust(10)[:10])
+            else:
+                print("No element found. Error detected.\n")
+            print((str(tag.text)) + str(i))
+            i += 1
 
-    #print('-' * 80)
+        data.append(header)
+
+        #data.append(MAC)
+
+    print('-' * 80)
+
+    dataF = [str(a).strip('[]') for a in data]
+    print("\n" . join(dataF).translate(None, "',") + "\n")
+
     #test = str(header).strip('[]').translate(None, "',")
     #print(test)
-    #print('-' * 80 + '\n')
+    print('-' * 80 + '\n')
 
     try:
         rows = table_body.find_all("tr")
