@@ -1,17 +1,12 @@
 #!/usr/local/bin/python
 
-try:
-    import readline
-except ImportError:
-    import pyreadline as readline
-
 import os
 import base64
 import getpass
 import re
 import csv
 import lxml
-import SendKeys
+import json
 
 from sys import argv
 from selenium import webdriver
@@ -90,12 +85,12 @@ def mainMenu():
         elif choice == '2':
             routerURLx = routerURL + routerDHCPList
             loop = False
-            connectSite(choice, False) # As opened via menu - devList = False
+            connectSite(choice)
         elif choice == '3':
             print "\nStarting Bandwidth Monitor..."
             routerURLx = routerURL + routerBandStat
             loop = False
-            connectSite(choice, False) # As opened via menu - devList = False
+            connectSite(choice)
         elif choice == '4':
             print "\nLoading Settings Menu..."
             settingsMenu()
@@ -137,9 +132,8 @@ def printSettings():
     print 25 * "-" , " Settings " , 25 * "-"
     print "1. Generate CSV File - [" + tmpCSV + "]"
     print "2. Generate HTML File - [" + tmpHTML + "]"
-    print "3. Change Device Names for Output"
-    print "4. Save and Exit"
-    print "5. Exit without saving"
+    print "3. Save and Exit"
+    print "4. Exit without saving"
     print 62 * "-"
     print "\n"
 
@@ -150,7 +144,6 @@ def settingsMenu():
     global makeHTML
     global tmpCSV
     global tmpHTML
-    global routerURLx
 	
     loop = True
     tmpCSV = ''
@@ -158,7 +151,7 @@ def settingsMenu():
 	
     while loop:
         printSettings()
-        choice = raw_input("Enter your choice [1-5]: ")
+        choice = raw_input("Enter your choice [1-4]: ")
      
         if choice == '1':
             while choice == '1':
@@ -187,13 +180,9 @@ def settingsMenu():
                     choice = ''
                 else:
                     print("\nInvalid input.\n")
-
+			
         elif choice == '3':
-            routerURLx = routerURL + routerDHCPList
-            choicex = '2'
-            devList = True
-            connectSite(choicex, devList) # Really could just use 2 and True as the params...
-        elif choice == '4':
+		#if Y, True, if N, False clear temp vals
 
             if tmpCSV == 'Yes':
                 makeCSV = True
@@ -211,7 +200,7 @@ def settingsMenu():
             loop = False
             mainMenu()
 
-        elif choice == '5':
+        elif choice == '4':
             print "\nReturning to main menu..."
             loop = False
             mainMenu()
@@ -220,7 +209,7 @@ def settingsMenu():
             print("\nInvalid option selected. Enter any option to try again..")
 
 
-def connectSite(choice, devList):
+def connectSite(choice):
 
     global makeCSV
     global makeHTML
@@ -276,11 +265,11 @@ def connectSite(choice, devList):
     
     browser.quit()
     #print(soup)
-    parsePage(choice, soup, devList)
+    parsePage(choice, soup)
 
 
 
-def parsePage(menuChoice, soupData, devList):
+def parsePage(menuChoice, soupData):
 
     data = []
 
@@ -346,11 +335,10 @@ def parsePage(menuChoice, soupData, devList):
 
         data.append(header)
 
-    if devList == False:
-        print('-' * 80)
-        dataF = [str(a).strip('[]') for a in data]
-        print("\n" . join(dataF).translate(None, "',"))
-        print('-' * 80 + '\n')
+    print('-' * 80)
+    dataF = [str(a).strip('[]') for a in data]
+    print("\n" . join(dataF).translate(None, "',"))
+    print('-' * 80 + '\n')
 
     #test = str(header).strip('[]').translate(None, "',")
     #print(test)
@@ -360,7 +348,7 @@ def parsePage(menuChoice, soupData, devList):
         rows = table_body.find_all("tr")
     except AttributeError:
         print "Table not found. Reloading page..."
-        connectSite(menuChoice, devList)
+        connectSite(menuChoice)
 
     for row in rows:
         cols = row.find_all("td")
@@ -381,52 +369,18 @@ def parsePage(menuChoice, soupData, devList):
                 body.append(str(ele.text.strip()).ljust(12)[:12])
             else:
                 print("No element found. Error detected.\n")
-            #print(str(ele.text.strip())) # code 0-7 for Bandwidth Monitor!
+            print(str(ele.text.strip())) # code 0-7 for Bandwidth Monitor!
             x += 1
         
         data.append(body)
 	
-    dataF = [str(a).strip('[]') for a in data[1:]]
+    dataF = [str(a).strip('[]') for a in data]
+    print("\n" . join(dataF).translate(None, "',") + "\n")
 
-    if devList == False:
-        print("\n" . join(dataF).translate(None, "',") + "\n")
-        callOutput(thead, table, data)
-        mainMenu()
-    else:
-        loadDeviceList(data)
-        
+    callOutput(thead, table, data)
+    mainMenu()
 	
-def loadDeviceList(data):
-
-    i = 0
-
-    print("\n" + "-" * 10 + " List of Devices " + "-" * 10 + "\n")
-
-    for x in data:
-        if i > 0:
-            print ("[" + str(i) + "] - " + data[i][1])
-        i += 1
-
-    print("\n[" + str(i) + "] - Return to Settings\n")
-
-    opt = raw_input("Select an item to change the name of: ")
-
-    list_id = [ seq[0].strip() for seq in data[1:] ]
 	
-    print list_id
-	
-    if opt in list_id:
-        data[int(opt)][1] =  raw_input("Enter a new device name for " + data[int(opt)][1].strip() + ": ")
-        loadDeviceList(data)
-    elif str(opt) == str(i):
-        print('Going back to settings menu')
-        #SendKeys.SendKeys(default_value, 0)
-        settingsMenu()
-    else:
-        print("\n" + opt + " not found. Select from device list.")
-        loadDeviceList(data)
-
-
 def callOutput(head, table, csvOutput):
 
     if makeHTML == True:
