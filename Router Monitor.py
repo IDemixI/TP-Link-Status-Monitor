@@ -12,6 +12,7 @@ import re
 import csv
 import lxml
 import SendKeys
+import Tkinter
 
 from sys import argv
 from selenium import webdriver
@@ -24,26 +25,32 @@ from bs4 import BeautifulSoup
 # Page links for each section that data is scraped from
 
 #Main Page (Status)
-routerURL = "http://192.168.1.1/"
+routerURL = "http://192.168.1.1/" # - Sky Hub
+# routerURL = "http://192.168.0.1/" - TP-Link Router
 
 #DHCP Client List
-routerDHCPList = "#__dhcpClient.htm"
+routerDHCPList = "#__dhcpClient.htm" # - TP-Link Router
 
-#Bandwidth Stats Page
-routerBandStat = "#__stat.htm"
+#Bandwidth Statistic Page
+routerBandStat = "#__stat.htm" # - TP-Link Router
 
 #Blank URL for parsing
 routerURLx = ""
 
-# Set a global variable for retries - try and load page 2/3 times before quitting out and resetting count
+# Set a global variable for retries - increment count until it reaches limit
 pageRetry = 0
 
-# Global Auth Key for cookie generation on multiple retries
+#Set a global variable for maximum retries
+pageRetryMax = 3
+
+# Global Authentication Key for cookie generation on multiple retries
 authKey = ""
 
+# Settings boolean for CSV and HTML creation 
 makeCSV = False
 makeHTML = False
 
+# Store the temporary CSV / HTML files
 tmpCSV = ''
 tmpHTML = ''
 
@@ -52,8 +59,6 @@ tmpHTML = ''
 def main():
 
     mainMenu()
-
-
 
 
 # Main Menu
@@ -66,10 +71,10 @@ def printMenu():
     print "3. Bandwidth Monitor"
     print "4. Settings"
     print "5. Exit"
+    print "6. Dev stuff"
     print 62 * "-"
     print "\n"
 
-	
 	
 def mainMenu():	
 
@@ -82,7 +87,7 @@ def mainMenu():
 
     while loop:
         printMenu()
-        choice = raw_input("Enter your choice [1-5]: ")
+        choice = raw_input("Enter your choice [1-6]: ")
      
         if choice == '1':     
             print "\nGetting Router Status..."
@@ -104,8 +109,17 @@ def mainMenu():
             print "\nExiting Program..."
             loop = False
             exit(0)
+        elif choice == '6':
+            top = Tkinter.Tk()
+
+            # changing the title of our master widget      
+            top.title("GUI")
+        
+            # Code to add widgets will go here...
+            top.mainloop()
+
         else:
-            # Any integer inputs other than values 1-5 we print an error message
+            # Any integer inputs other than values 1-6 we print an error message
             print("\nInvalid option selected. Enter any option to try again..")
 
 
@@ -161,6 +175,7 @@ def settingsMenu():
         choice = raw_input("Enter your choice [1-5]: ")
      
         if choice == '1':
+		
             while choice == '1':
                 print("\n")
                 tmpCSV = raw_input("Generate CSV File (Y/N): ")
@@ -175,6 +190,7 @@ def settingsMenu():
                     print("\nInvalid input.\n")
 
         elif choice == '2':
+		
             while choice == '2':
                 print("\n")
                 tmpHTML = raw_input("Generate HTML File (Y/N): ")
@@ -189,10 +205,12 @@ def settingsMenu():
                     print("\nInvalid input.\n")
 
         elif choice == '3':
+		
             routerURLx = routerURL + routerDHCPList
             choicex = '2'
             devList = True
-            connectSite(choicex, devList) # Really could just use 2 and True as the params...
+            connectSite(choicex, devList) # Really could just use 2 and True as the parameters...
+			
         elif choice == '4':
 
             if tmpCSV == 'Yes':
@@ -212,9 +230,11 @@ def settingsMenu():
             mainMenu()
 
         elif choice == '5':
+		
             print "\nReturning to main menu..."
             loop = False
             mainMenu()
+			
         else:
             # Any integer inputs other than values 1-5 we print an error message
             print("\nInvalid option selected. Enter any option to try again..")
@@ -247,7 +267,7 @@ def connectSite(choice, devList):
         print ("\nDebug Mode...\n")
         makeCSV = True
         makeHTML = True
-        print ("Your Auth Key is: " + authKey + "\n")
+        print ("Your Authentication Key is: " + authKey + "\n")
         browser = webdriver.PhantomJS()	
     else:
         if authKey == "":
@@ -255,11 +275,11 @@ def connectSite(choice, devList):
             cookieIn = b"admin:" + passwd
             cookieOut = base64.b64encode(cookieIn.encode("utf8","ignore"))
             authKey = "Basic " + cookieOut
-            print ("Your Auth Key is: '" + authKey + "'\n")
+            print ("Your Authentication Key is: '" + authKey + "'\n")
 
         browser = webdriver.PhantomJS()
 
-    browser.add_cookie({'name': 'Authorization', 'value': authKey, 'domain': '192.168.1.1', 'path': '/'})
+    browser.add_cookie({'name': 'Authorisation', 'value': authKey, 'domain': '192.168.1.1', 'path': '/'})
 
     browser.get(routerURLx)
 
@@ -350,7 +370,7 @@ def parsePage(menuChoice, soupData, devList):
         print('-' * 80)
         dataF = [str(a).strip('[]') for a in data]
         print("\n" . join(dataF).translate(None, "',"))
-        print('-' * 80 + '\n')
+        print('-' * 80)
 
     #test = str(header).strip('[]').translate(None, "',")
     #print(test)
@@ -413,8 +433,6 @@ def loadDeviceList(data):
 
     list_id = [ seq[0].strip() for seq in data[1:] ]
 	
-    print list_id
-	
     if opt in list_id:
         data[int(opt)][1] =  raw_input("Enter a new device name for " + data[int(opt)][1].strip() + ": ")
         loadDeviceList(data)
@@ -436,15 +454,15 @@ def callOutput(head, table, csvOutput):
 
         htmlO = """<html>
         <head><style>td { text-align: center; } table { border: thin solid black; } </style></head>
-        <body><br>"""
+        <body><br />"""
 
         htmlC = """</body>
         </html>"""
 
         f.write(htmlO + "\n")
 
-        f.write(str(head).replace('<br/>', '').replace('628px', '800px') + "\n")
-        f.write(str(table).replace('<br/>', '').replace('628px;', '800px; border-top: 0;').replace('<tr>', '\n<tr>') + "\n")
+        f.write(str(head).replace('<br />', '').replace('628px', '800px') + "\n")
+        f.write(str(table).replace('<br />', '').replace('628px;', '800px; border-top: 0;').replace('<tr>', '\n<tr>') + "\n")
         f.write (htmlC)	
 
         f.close()
